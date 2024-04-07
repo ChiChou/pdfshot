@@ -1,0 +1,42 @@
+<script src="pdfjs/pdf.mjs" type="module"></script>
+
+<script type="module">
+  console.log(window.location.search);
+  const url = new URLSearchParams(window.location.search).get('url');
+  if (typeof url !== 'string') throw new Error('Empty param');
+
+  const { pdfjsLib } = globalThis;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdfjs/pdf.worker.mjs';
+
+  const loadingTask = pdfjsLib.getDocument(url);
+  loadingTask.promise.then(async (pdf) => {
+    const pageNumber = 1;
+
+    const page = await pdf.getPage(pageNumber);
+    const original = page.getViewport({ scale: 1 });
+
+    // resize to 1920x1080
+    const { width, height } = original;
+    const scale = 1920 / width;
+    const offsetY = (1080 - height * scale) / 2;
+
+    const viewport = page.getViewport({ scale });
+    const canvas = document.getElementById('the-canvas');
+    const canvasContext = canvas.getContext('2d');
+
+    // canvas.height = viewport.height;
+    // canvas.width = viewport.width;
+
+    const renderContext = {
+      canvasContext,
+      viewport: page.getViewport({ scale, offsetY }),
+    };
+
+    const renderTask = page.render(renderContext);
+    await renderTask.promise;
+
+    console.log('ready');
+  })
+</script>
+
+<canvas id="the-canvas" width="1920" height="1080"></canvas>
