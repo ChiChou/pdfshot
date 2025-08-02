@@ -1,11 +1,14 @@
 {
   "name": "pdfshot",
   "dependencies": {
-    "koa": "^2.15.2",
-    "koa-mount": "^4.0.0",
-    "koa-static": "^5.0.0",
+    "@hono/node-server": "^1.18.1",
+    "hono": "^4.0.0",
     "pdfjs-dist": "^4.0.379",
     "puppeteer": "^22.6.3"
+  },
+  "type": "module",
+  "scripts": {
+    "start": "node job.mjs"
   },
   "version": "1.0.0",
   "description": "generate thumbnail for pdf files",

@@ -3,43 +3,43 @@
 import { join } from 'path';
 import { promises as fsp } from 'fs';
 
-import Koa from 'koa';
-import serve from 'koa-static';
-import mount from 'koa-mount';
+import { Hono } from 'hono';
+import { logger } from 'hono/logger'
+import { serve } from '@hono/node-server'
+import { serveStatic } from '@hono/node-server/serve-static';
 import puppeteer from 'puppeteer';
 
-const __dirname = import.meta.dirname;
-
-
-(async () => {
+(async function main() {
     const pdf = 'pdf';
-    const app = new Koa();
+    const output = 'output';
+    const app = new Hono();
 
-    const __dirname = import.meta.resolve('.').substring('file://'.length);
+    app.use(logger());
+    app.get('/pdf/*', serveStatic({ root: './', rewriteRequestPath: path => path.replace(/^\/pdf/, '/pdf') }));
+    app.get('/pdfjs/*', serveStatic({ root: './', rewriteRequestPath: path => path.replace(/^\/pdfjs/, '/node_modules/pdfjs-dist/build') }));
+    app.get('/', async (c) => c.html(await fsp.readFile(join('web', 'index.html'), 'utf-8')));
 
-    app.use(mount('/pdf', serve(pdf)));
-    app.use(mount('/pdfjs/', serve(join(__dirname, 'node_modules', 'pdfjs-dist', 'build'))));
-    app.use(mount('/', serve(join(__dirname, 'web'))));
-
-    const server = app.listen();
+    const server = serve({ fetch: app.fetch, port: 0});
     const port = server.address().port;
 
     console.log(`Serving slides at http://localhost:${port}`);
 
+    await fsp.access(output).catch(() => fsp.mkdir(output));
+
     const files = await fsp.readdir(pdf);
     const browser = await puppeteer.launch();
+
     for (const file of files) {
         if (!file.endsWith('.pdf')) continue;
 
         const path = join('output', file.replace('.pdf', '.png'));
         const page = await browser.newPage();
-        console.log(`http://localhost:${port}/index.html?url=${pdf}/${file}`);
-        await page.goto(`http://localhost:${port}/index.html?url=${pdf}/${file}`);
+        console.log(`http://localhost:${port}/?url=${pdf}/${encodeURIComponent(file)}`);
+        await page.goto(`http://localhost:${port}/?url=${pdf}/${encodeURIComponent(file)}`);
 
-        page.on('console', msg => {
-            console.log('PAGE LOG:', msg.text());
-        });
-    
+        page.on('console', msg =>
+            console.log('PAGE LOG:', msg.text()));
+
         await new Promise(resolve => {
             page.on('console', msg => {
                 console.log('PAGE LOG:', msg.text());
@@ -47,7 +47,7 @@ const __dirname = import.meta.dirname;
             });
         });
 
-        const canvas = await page.$('#the-canvas');        
+        const canvas = await page.$('#the-canvas');
         await canvas.screenshot({ path });
         console.log('saved to', path);
         await page.close();
