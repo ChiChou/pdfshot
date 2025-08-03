@@ -10,8 +10,25 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import puppeteer from "puppeteer";
 
 (async function main() {
-  const pdf = "pdf";
-  const output = "output";
+  let input = "pdf";
+  let output = "output";
+
+  if (process.argv === 4) {
+    input = process.argv[2];
+    output = process.argv[3];
+  } else if (process.argv > 2) {
+    console.error(
+      "Usage: job.mjs [input-directory] [output-directory]\n" +
+        "Default input directory is 'pdf' and output directory is 'output'.",
+    );
+    process.exit(1);
+  }
+
+  if (!await fsp.access(input).catch(() => false).then(() => true)) {
+    console.error(`Input directory "${input}" does not exist.`);
+    process.exit(1);
+  }
+
   const app = new Hono();
 
   app.use(logger());
@@ -41,7 +58,7 @@ import puppeteer from "puppeteer";
 
   await fsp.access(output).catch(() => fsp.mkdir(output));
 
-  const files = await fsp.readdir(pdf);
+  const files = await fsp.readdir(input);
   const browser = await puppeteer.launch();
 
   for (const file of files) {
@@ -50,10 +67,10 @@ import puppeteer from "puppeteer";
     const path = join("output", file.replace(".pdf", ".png"));
     const page = await browser.newPage();
     console.log(
-      `http://localhost:${port}/?url=${pdf}/${encodeURIComponent(file)}`,
+      `http://localhost:${port}/?url=${input}/${encodeURIComponent(file)}`,
     );
     await page.goto(
-      `http://localhost:${port}/?url=${pdf}/${encodeURIComponent(file)}`,
+      `http://localhost:${port}/?url=${input}/${encodeURIComponent(file)}`,
     );
 
     page.on("console", (msg) => console.log("PAGE LOG:", msg.text()));
