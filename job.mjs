@@ -2,6 +2,7 @@
 
 import { join } from "path";
 import { promises as fsp } from "fs";
+import { parseArgs } from "util";
 
 import { Hono } from "hono";
 import { logger } from "hono/logger";
@@ -10,19 +11,25 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import puppeteer from "puppeteer";
 
 (async function main() {
-  let input = "pdf";
-  let output = "output";
+  const { values } = parseArgs({
+    options: {
+      input: { type: "string", short: "i", default: "pdf" },
+      output: { type: "string", short: "o", default: "output" },
+      help: { type: "boolean", short: "h", default: false },
+    },
+  });
 
-  if (process.argv === 4) {
-    input = process.argv[2];
-    output = process.argv[3];
-  } else if (process.argv > 2) {
-    console.error(
-      "Usage: job.mjs [input-directory] [output-directory]\n" +
-        "Default input directory is 'pdf' and output directory is 'output'.",
+  if (values.help) {
+    console.log(
+      "Usage: job.mjs [--input|-i <dir>] [--output|-o <dir>]\n" +
+        "  --input, -i   Input directory (default: 'pdf')\n" +
+        "  --output, -o  Output directory (default: 'output')",
     );
-    process.exit(1);
+    process.exit(0);
   }
+
+  const input = values.input;
+  const output = values.output;
 
   if (
     !(await fsp
