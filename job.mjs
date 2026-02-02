@@ -24,7 +24,12 @@ import puppeteer from "puppeteer";
     process.exit(1);
   }
 
-  if (!await fsp.access(input).catch(() => false).then(() => true)) {
+  if (
+    !(await fsp
+      .access(input)
+      .catch(() => false)
+      .then(() => true))
+  ) {
     console.error(`Input directory "${input}" does not exist.`);
     process.exit(1);
   }
@@ -90,4 +95,6 @@ import puppeteer from "puppeteer";
 
   await browser.close();
   server.close();
+
+  process.exit(0);
 })();
